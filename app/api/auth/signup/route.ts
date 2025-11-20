@@ -66,7 +66,6 @@ export async function POST(request: Request) {
         id: authData.user.id,
         email: authData.user.email,
         full_name: fullName,
-        credits: 0,
         plan_tier: 'none',
         subscription_status: 'inactive',
         created_at: new Date().toISOString(),

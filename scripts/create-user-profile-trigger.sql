@@ -10,21 +10,15 @@ BEGIN
     id,
     email,
     full_name,
-    credits,
     plan_tier,
-    subscription_status,
-    created_at,
-    updated_at
+    subscription_status
   )
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    0,  -- 0 crédits par défaut (utilisateur doit acheter un plan)
     'none',
-    'inactive',
-    NOW(),
-    NOW()
+    'inactive'
   );
 
   RETURN NEW;
