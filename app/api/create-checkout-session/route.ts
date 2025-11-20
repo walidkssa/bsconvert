@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     // Si le profil n'existe pas, le créer maintenant
+    let profileData = profile;
     if (profileError || !profile) {
       console.error('User profile not found, creating it now:', profileError);
 
@@ -68,14 +69,31 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       }
+
+      // Re-fetch the profile after creation
+      const { data: newProfile, error: refetchError } = await supabase
+        .from('user_profiles')
+        .select('stripe_customer_id, email')
+        .eq('id', user.id)
+        .single();
+
+      if (refetchError || !newProfile) {
+        console.error('Failed to fetch newly created profile:', refetchError);
+        return NextResponse.json(
+          { error: 'Failed to fetch user profile after creation.' },
+          { status: 500 }
+        );
+      }
+
+      profileData = newProfile;
     }
 
-    let customerId = (profile as any)?.stripe_customer_id;
+    let customerId = (profileData as any)?.stripe_customer_id;
 
     // Si pas de customer Stripe, en créer un
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user.email || (profile as any)?.email,
+        email: user.email || (profileData as any)?.email,
         metadata: {
           supabase_user_id: user.id,
         },

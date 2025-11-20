@@ -780,21 +780,41 @@ ${extractedText}
     });
   } catch (error) {
     console.error("Error processing PDF:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+    console.error("Error type:", typeof error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
 
     // Update conversion status to failed
     if (conversionId) {
-      await supabase
-        .from("conversions")
-        .update({
-          status: "failed",
-          error_message: error instanceof Error ? error.message : "Failed to process PDF",
-          processing_time_ms: Date.now() - startTime,
-        })
-        .eq("id", conversionId);
+      try {
+        await supabase
+          .from("conversions")
+          .update({
+            status: "failed",
+            error_message: error instanceof Error ? error.message : "Failed to process PDF",
+            processing_time_ms: Date.now() - startTime,
+          })
+          .eq("id", conversionId);
+      } catch (updateError) {
+        console.error("Failed to update conversion status:", updateError);
+      }
     }
 
+    // Return detailed error information
+    const errorMessage = error instanceof Error ? error.message : "Failed to process PDF";
+    const errorDetails = {
+      message: errorMessage,
+      type: error instanceof Error ? error.constructor.name : typeof error,
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3).join('\n') : undefined,
+    };
+
+    console.error("Returning error response:", errorDetails);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to process PDF" },
+      {
+        error: errorMessage,
+        details: errorDetails,
+      },
       { status: 500 }
     );
   }
