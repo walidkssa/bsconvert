@@ -10,7 +10,8 @@ import type { ValidationReport } from "@/lib/transaction-validator";
 import { getPCGCode } from "@/lib/accounting-formats";
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import DOMPurify from "isomorphic-dompurify";
+// DOMPurify removed due to ESM compatibility issues on Vercel
+// Sanitization will be done client-side instead
 
 // Initialize OpenAI client for XAI Grok
 const openai = new OpenAI({
@@ -35,11 +36,16 @@ function validateFileSignature(buffer: Buffer, type: string): boolean {
   return true;
 }
 
+// Simple server-side sanitization without DOMPurify
 function sanitizeDescription(desc: string): string {
-  return DOMPurify.sanitize(desc, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: []
-  }).trim();
+  if (!desc) return '';
+  // Remove potentially dangerous characters and scripts
+  return desc
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<[^>]+>/g, '') // Remove HTML tags
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .trim()
+    .substring(0, 500); // Limit length
 }
 
 interface Transaction {
