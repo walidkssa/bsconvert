@@ -1,0 +1,15 @@
+BANK STATEMENT TEST
+
+Account Number: 1234567890
+Period: January 2024
+
+Date        Description                 Amount      Balance
+2024-01-01  Opening Balance                         1000.00
+2024-01-05  Salary Deposit              +2500.00    3500.00
+2024-01-10  Rent Payment                -1200.00    2300.00
+2024-01-15  Grocery Store               -150.00     2150.00
+2024-01-20  Utilities                   -80.00      2070.00
+2024-01-25  Restaurant                  -45.00      2025.00
+2024-01-31  Closing Balance                         2025.00
+
+This is a test bank statement for BS Convert free trial.
