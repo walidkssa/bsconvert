@@ -59,7 +59,9 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || "Une erreur est survenue");
+        const errorDetails = `${data.error || 'Erreur'}\n${data.message || ''}\n${data.details || ''}\n${data.hint || ''}\nCode: ${data.code || ''}`;
+        console.error('Full signup error:', data);
+        throw new Error(errorDetails);
       }
 
       setSuccess(true);

@@ -62,21 +62,30 @@ export async function POST(request: Request) {
     if (!existingProfile) {
       console.log('Trigger did not create profile, creating manually...');
 
+      const profileData = {
+        id: authData.user.id,
+        email: authData.user.email,
+        full_name: fullName,
+        credits: 0,
+        plan_tier: 'none',
+        subscription_status: 'inactive',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('Attempting to insert profile:', JSON.stringify(profileData, null, 2));
+
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email: authData.user.email,
-          full_name: fullName,
-          credits: 0,
-          plan_tier: 'none',
-          subscription_status: 'inactive',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        } as any);
+        .insert(profileData as any);
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        console.error('Profile creation error FULL DETAILS:', JSON.stringify({
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code,
+        }, null, 2));
 
         // Try to delete the auth user if profile creation failed
         await supabase.auth.admin.deleteUser(authData.user.id);
@@ -84,7 +93,10 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error: 'Failed to create user profile',
-            details: profileError.message
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            code: profileError.code,
           },
           { status: 500 }
         );
