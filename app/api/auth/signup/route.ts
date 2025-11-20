@@ -49,57 +49,28 @@ export async function POST(request: Request) {
     }
 
     // Wait a bit for the trigger to execute
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Check if profile was created by trigger
-    const { data: existingProfile } = await supabase
+    // Verify that profile was created by trigger
+    const { data: profile, error: profileCheckError } = await supabase
       .from('user_profiles')
       .select('id')
       .eq('id', authData.user.id)
       .single();
 
-    // If trigger didn't create profile, create it manually
-    if (!existingProfile) {
-      console.log('Trigger did not create profile, creating manually...');
+    if (profileCheckError || !profile) {
+      console.error('Profile was not created by trigger:', profileCheckError);
 
-      const profileData = {
-        id: authData.user.id,
-        email: authData.user.email,
-        full_name: fullName,
-        plan_tier: 'none',
-        subscription_status: 'inactive',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // Delete the auth user since profile creation failed
+      await supabase.auth.admin.deleteUser(authData.user.id);
 
-      console.log('Attempting to insert profile:', JSON.stringify(profileData, null, 2));
-
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert(profileData as any);
-
-      if (profileError) {
-        console.error('Profile creation error FULL DETAILS:', JSON.stringify({
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          code: profileError.code,
-        }, null, 2));
-
-        // Try to delete the auth user if profile creation failed
-        await supabase.auth.admin.deleteUser(authData.user.id);
-
-        return NextResponse.json(
-          {
-            error: 'Failed to create user profile',
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            code: profileError.code,
-          },
-          { status: 500 }
-        );
-      }
+      return NextResponse.json(
+        {
+          error: 'Failed to create user profile',
+          message: 'Le profil utilisateur n\'a pas pu être créé. Veuillez réessayer.',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
