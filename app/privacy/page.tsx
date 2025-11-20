@@ -247,7 +247,7 @@ export default function PrivacyPage() {
                   To exercise any of these rights, please contact us at:
                 </p>
                 <p className="text-sm">
-                  <strong>Email:</strong> privacy@bsconvert.com<br />
+                  <strong>Email:</strong> bsconvert.contact@gmail.com<br />
                   <strong>Response Time:</strong> We will respond to your request within 30 days
                 </p>
               </div>
