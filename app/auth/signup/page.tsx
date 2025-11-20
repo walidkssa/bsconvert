@@ -65,21 +65,25 @@ export default function SignupPage() {
         throw new Error('User creation failed');
       }
 
-      // Wait a bit for the trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Verify profile was created
-      const { data: profile, error: profileError } = await supabase
+      // Create the user profile directly (don't rely on trigger)
+      const { error: profileError } = await (supabase as any)
         .from('user_profiles')
-        .select('id')
-        .eq('id', authData.user.id)
-        .single();
+        .insert({
+          id: authData.user.id,
+          email: authData.user.email,
+          full_name: fullName,
+          plan_tier: 'none',
+          subscription_status: 'inactive',
+          credits: 0,
+        });
 
-      if (profileError || !profile) {
+      if (profileError) {
         console.error('Profile creation failed:', profileError);
-        // Delete the auth user if profile creation failed
-        await supabase.auth.signOut();
-        throw new Error('Erreur lors de la création du profil. Veuillez réessayer.');
+        // If profile already exists (from trigger), that's fine
+        if (profileError.code !== '23505') { // 23505 = unique violation (already exists)
+          await supabase.auth.signOut();
+          throw new Error('Erreur lors de la création du profil. Veuillez réessayer.');
+        }
       }
 
       setSuccess(true);
