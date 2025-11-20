@@ -11,7 +11,7 @@ BEGIN
     email,
     full_name,
     credits,
-    subscription_tier,
+    plan_tier,
     subscription_status,
     created_at,
     updated_at
@@ -21,7 +21,7 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     0,  -- 0 crédits par défaut (utilisateur doit acheter un plan)
-    'free',
+    'none',
     'inactive',
     NOW(),
     NOW()
