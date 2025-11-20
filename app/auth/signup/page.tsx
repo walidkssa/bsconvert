@@ -67,7 +67,7 @@ export default function SignupPage() {
           credits: 0,
           subscription_tier: "free",
           subscription_status: "inactive",
-        });
+        } as any);
 
       // Ignore duplicate key error (trigger already created profile)
       if (profileError && !profileError.message.includes("duplicate key")) {
