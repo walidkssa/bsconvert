@@ -44,7 +44,7 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -55,6 +55,24 @@ export default function SignupPage() {
       });
 
       if (signUpError) throw signUpError;
+      if (!data.user) throw new Error("User creation failed");
+
+      // Create user profile explicitly (backup for trigger)
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: fullName,
+          credits: 0,
+          subscription_tier: "free",
+          subscription_status: "inactive",
+        });
+
+      // Ignore duplicate key error (trigger already created profile)
+      if (profileError && !profileError.message.includes("duplicate key")) {
+        throw profileError;
+      }
 
       setSuccess(true);
       setTimeout(() => {
