@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
     if (profileError || !profile) {
       console.error('User profile not found, creating it now:', profileError);
 
-      // Create the profile
-      const { error: createError } = await supabase
+      // Create the profile with explicit type casting
+      const { error: createError } = await (supabase as any)
         .from('user_profiles')
         .insert({
           id: user.id,
