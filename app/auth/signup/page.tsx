@@ -43,35 +43,23 @@ export default function SignupPage() {
     }
 
     try {
-      const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
+      // Call API route for signup
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+        }),
       });
 
-      if (signUpError) throw signUpError;
-      if (!data.user) throw new Error("User creation failed");
+      const data = await response.json();
 
-      // Create user profile explicitly (backup for trigger)
-      const { error: profileError } = await supabase
-        .from("user_profiles")
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
-          full_name: fullName,
-          credits: 0,
-          subscription_tier: "free",
-          subscription_status: "inactive",
-        } as any);
-
-      // Ignore duplicate key error (trigger already created profile)
-      if (profileError && !profileError.message.includes("duplicate key")) {
-        throw profileError;
+      if (!response.ok) {
+        throw new Error(data.error || data.details || "Une erreur est survenue");
       }
 
       setSuccess(true);
@@ -80,6 +68,7 @@ export default function SignupPage() {
         router.refresh();
       }, 2000);
     } catch (err) {
+      console.error("Signup error:", err);
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
     } finally {
       setLoading(false);
