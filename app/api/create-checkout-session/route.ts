@@ -39,11 +39,36 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Récupérer ou créer le Stripe customer
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('stripe_customer_id, email')
       .eq('id', user.id)
       .single();
+
+    // Si le profil n'existe pas, le créer maintenant
+    if (profileError || !profile) {
+      console.error('User profile not found, creating it now:', profileError);
+
+      // Create the profile
+      const { error: createError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || '',
+          plan_tier: 'none',
+          subscription_status: 'inactive',
+          credits: 0,
+        });
+
+      if (createError) {
+        console.error('Failed to create user profile:', createError);
+        return NextResponse.json(
+          { error: 'User profile not found. Please contact support.' },
+          { status: 500 }
+        );
+      }
+    }
 
     let customerId = (profile as any)?.stripe_customer_id;
 

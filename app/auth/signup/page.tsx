@@ -43,32 +43,49 @@ export default function SignupPage() {
     }
 
     try {
-      // Call API route for signup
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const supabase = createClient();
+
+      // Sign up with Supabase - this will create the user AND create a session automatically
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
         },
-        body: JSON.stringify({
-          email,
-          password,
-          fullName,
-        }),
       });
 
-      const data = await response.json();
+      if (signUpError) {
+        console.error('Signup error:', signUpError);
+        throw new Error(signUpError.message);
+      }
 
-      if (!response.ok) {
-        const errorDetails = `${data.error || 'Erreur'}\n${data.message || ''}\n${data.details || ''}\n${data.hint || ''}\nCode: ${data.code || ''}`;
-        console.error('Full signup error:', data);
-        throw new Error(errorDetails);
+      if (!authData.user) {
+        throw new Error('User creation failed');
+      }
+
+      // Wait a bit for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Verify profile was created
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile creation failed:', profileError);
+        // Delete the auth user if profile creation failed
+        await supabase.auth.signOut();
+        throw new Error('Erreur lors de la création du profil. Veuillez réessayer.');
       }
 
       setSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-        router.refresh();
-      }, 2000);
+      // User is now logged in with an active session, redirect immediately
+      router.push("/dashboard");
+      router.refresh();
     } catch (err) {
       console.error("Signup error:", err);
       setError(err instanceof Error ? err.message : "Une erreur est survenue");

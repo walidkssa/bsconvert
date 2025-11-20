@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    // Create auth user
+    // Create auth user with auto-confirm (no email verification needed)
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: undefined, // Disable email confirmation
       },
     });
 
