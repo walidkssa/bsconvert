@@ -135,7 +135,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Créer la Checkout Session
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    // Force bsconvert.com in production, localhost in dev
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://bsconvert.com'
+      : 'http://localhost:3000';
     console.log('Creating Stripe checkout session...');
     console.log('Session params:', {
       customerId,
