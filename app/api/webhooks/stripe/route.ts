@@ -210,6 +210,18 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 
     const isUpgrade = currentProfile && currentProfile.plan_tier !== planTier;
 
+    // Handle period dates safely
+    let periodStart = null;
+    let periodEnd = null;
+
+    if (subscription.current_period_start && subscription.current_period_start > 0) {
+      periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+    }
+
+    if (subscription.current_period_end && subscription.current_period_end > 0) {
+      periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    }
+
     await supabaseAdmin
       .from('user_profiles')
       .update({
@@ -220,8 +232,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
         // RESET credits_used si c'est un upgrade ou changement de plan
         credits_used_this_month: isUpgrade ? 0 : undefined,
         stripe_subscription_id: subscription.id,
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
       })
       .eq('id', userId);
 
@@ -303,14 +315,26 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     if (planTier && billingCycle) {
       const creditsLimit = getPlanLimit(planTier, billingCycle);
 
+      // Handle period dates safely
+      let periodStart = null;
+      let periodEnd = null;
+
+      if (subscription.current_period_start && subscription.current_period_start > 0) {
+        periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      }
+
+      if (subscription.current_period_end && subscription.current_period_end > 0) {
+        periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      }
+
       // Reset les crédits
       await supabaseAdmin
         .from('user_profiles')
         .update({
           credits_used_this_month: 0,
           subscription_status: 'active',
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
         })
         .eq('id', userId);
 
