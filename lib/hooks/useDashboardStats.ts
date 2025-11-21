@@ -42,7 +42,11 @@ export function useDashboardStats() {
         // SECURITY FIX: Get authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
-          throw new Error('Unauthorized - Please log in');
+          // User not authenticated yet - silently return without error
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
+          return;
         }
 
         // Get current date
