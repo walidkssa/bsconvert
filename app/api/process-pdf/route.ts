@@ -191,10 +191,11 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Credit check passed: ${creditsRemaining} available, ${pageCount} needed`);
     }
 
-    // Create initial conversion record (user_id will be set automatically by trigger)
+    // Create initial conversion record with explicit user_id
     const { data: conversion, error: insertError } = await supabase
       .from("conversions")
       .insert({
+        user_id: user.id,
         filename: file.name,
         file_size: file.size,
         file_type: file.type,
