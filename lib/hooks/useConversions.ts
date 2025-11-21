@@ -22,13 +22,20 @@ export function useConversions(limit?: number) {
       setLoading(true);
       setError(null);
 
+      // SECURITY FIX: Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Unauthorized - Please log in');
+      }
+
       let query = supabase
         .from("conversions")
         .select(`
           *,
           transactions (*)
         `)
-        .order("created_at", { ascending: false });
+        .eq('user_id', user.id)
+        .order("created_at", { ascending: false});
 
       if (limit) {
         query = query.limit(limit);
@@ -98,6 +105,12 @@ export function useConversion(id: string) {
       setLoading(true);
       setError(null);
 
+      // SECURITY FIX: Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Unauthorized - Please log in');
+      }
+
       const { data, error: fetchError } = await supabase
         .from("conversions")
         .select(`
@@ -105,6 +118,7 @@ export function useConversion(id: string) {
           transactions (*)
         `)
         .eq("id", id)
+        .eq('user_id', user.id)
         .single();
 
       if (fetchError) throw fetchError;

@@ -39,6 +39,12 @@ export function useDashboardStats() {
         setError(null);
       }
 
+        // SECURITY FIX: Get authenticated user
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user) {
+          throw new Error('Unauthorized - Please log in');
+        }
+
         // Get current date
         const now = new Date();
         const currentMonth = now.getMonth();
@@ -46,37 +52,42 @@ export function useDashboardStats() {
         const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
         const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-        // Total conversions
+        // Total conversions - FIXED: Filter by user_id
         const { count: totalCount } = await supabase
           .from("conversions")
-          .select("*", { count: "exact", head: true });
+          .select("*", { count: "exact", head: true })
+          .eq('user_id', user.id);
 
-        // This month conversions
+        // This month conversions - FIXED: Filter by user_id
         const firstDayOfMonth = new Date(currentYear, currentMonth, 1).toISOString();
         const { count: monthCount } = await supabase
           .from("conversions")
           .select("*", { count: "exact", head: true })
+          .eq('user_id', user.id)
           .gte("created_at", firstDayOfMonth);
 
-        // Last month conversions
+        // Last month conversions - FIXED: Filter by user_id
         const firstDayOfLastMonth = new Date(lastMonthYear, lastMonth, 1).toISOString();
         const firstDayOfCurrentMonth = new Date(currentYear, currentMonth, 1).toISOString();
         const { count: lastMonthCount } = await supabase
           .from("conversions")
           .select("*", { count: "exact", head: true })
+          .eq('user_id', user.id)
           .gte("created_at", firstDayOfLastMonth)
           .lt("created_at", firstDayOfCurrentMonth);
 
-        // Successful conversions
+        // Successful conversions - FIXED: Filter by user_id
         const { count: successCount } = await supabase
           .from("conversions")
           .select("*", { count: "exact", head: true })
+          .eq('user_id', user.id)
           .eq("status", "completed");
 
-        // Pending conversions
+        // Pending conversions - FIXED: Filter by user_id
         const { count: pendingCount } = await supabase
           .from("conversions")
           .select("*", { count: "exact", head: true })
+          .eq('user_id', user.id)
           .in("status", ["pending", "processing"]);
 
         // Calculate growth percentage
@@ -99,10 +110,11 @@ export function useDashboardStats() {
           });
         }
 
-        // Fetch bank distribution
+        // Fetch bank distribution - FIXED: Filter by user_id
         const { data: bankData } = await supabase
           .from("conversions")
           .select("bank_name")
+          .eq('user_id', user.id)
           .not("bank_name", "is", null);
 
         if (bankData && isMountedRef.current) {
@@ -140,6 +152,7 @@ export function useDashboardStats() {
           const { count } = await supabase
             .from("conversions")
             .select("*", { count: "exact", head: true })
+            .eq('user_id', user.id)
             .gte("created_at", monthStart)
             .lt("created_at", monthEnd);
 
