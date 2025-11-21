@@ -111,6 +111,18 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   const creditsLimit = getPlanLimit(planTier, billingCycle);
 
+  // Handle period dates safely
+  let periodStart = null;
+  let periodEnd = null;
+
+  if (subscription.current_period_start && subscription.current_period_start > 0) {
+    periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+  }
+
+  if (subscription.current_period_end && subscription.current_period_end > 0) {
+    periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+  }
+
   // Mettre à jour le profil utilisateur
   const { error: profileError } = await supabaseAdmin
     .from('user_profiles')
@@ -122,8 +134,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       credits_used_this_month: 0,
       stripe_customer_id: session.customer as string,
       stripe_subscription_id: subscriptionId,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
     })
     .eq('id', userId);
 
@@ -132,26 +144,30 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     throw profileError;
   }
 
-  // Créer l'entrée dans subscriptions
-  const { error: subError } = await supabaseAdmin
-    .from('subscriptions')
-    .insert({
-      user_id: userId,
-      plan_tier: planTier,
-      billing_cycle: billingCycle,
-      amount: (session.amount_total || 0) / 100,
-      currency: session.currency || 'usd',
-      status: 'active',
-      stripe_subscription_id: subscriptionId,
-      stripe_customer_id: session.customer as string,
-      stripe_price_id: subscription.items.data[0].price.id,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-    });
+  // Créer l'entrée dans subscriptions (skip if dates are null to avoid constraint error)
+  if (periodStart && periodEnd) {
+    const { error: subError } = await supabaseAdmin
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        plan_tier: planTier,
+        billing_cycle: billingCycle,
+        amount: (session.amount_total || 0) / 100,
+        currency: session.currency || 'usd',
+        status: 'active',
+        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: session.customer as string,
+        stripe_price_id: subscription.items.data[0].price.id,
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+      });
 
-  if (subError) {
-    console.error('❌ Error creating subscription record:', subError);
-    throw subError;
+    if (subError) {
+      console.error('❌ Error creating subscription record:', subError);
+      // Don't throw - user profile is already activated
+    }
+  } else {
+    console.log('⚠️  Skipping subscription record creation - invalid period dates');
   }
 
   // Logger la transaction de crédit (reset initial)
